@@ -5,7 +5,7 @@ build-android64/
 
 test.txt
 test.cpp
-AGENTS.MD
+AGENTS.md
 
 # Prerequisites
 *.d
