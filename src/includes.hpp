@@ -9,11 +9,47 @@
 #include <queue>
 #include <cmath>
 #include <vector>
+#include <utility>
 
 #include "renderer/renderer.hpp"
 #include "macro.hpp"
 
 using namespace geode::prelude;
+
+#if defined(GEODE_IS_WINDOWS) && __has_include(<geode.custom-keybinds/include/Keybinds.hpp>)
+#define XDBOT_HAS_CUSTOM_KEYBINDS 1
+#else
+#define XDBOT_HAS_CUSTOM_KEYBINDS 0
+#endif
+
+class CompatPopupBase : public geode::Popup {
+protected:
+    bool initPopup(float width, float height, char const* bg = "GJ_square01.png", cocos2d::CCRect bgRect = {}) {
+        return geode::Popup::init(width, height, bg, bgRect);
+    }
+};
+
+template <class... Args>
+class CompatPopup : public CompatPopupBase {
+protected:
+    virtual bool setup(Args... args) = 0;
+
+    bool initAnchored(float width, float height, Args... args, char const* bg = "GJ_square01.png", cocos2d::CCRect bgRect = {}) {
+        if (!this->initPopup(width, height, bg, bgRect)) return false;
+        return this->setup(std::forward<Args>(args)...);
+    }
+};
+
+template <>
+class CompatPopup<> : public CompatPopupBase {
+protected:
+    virtual bool setup() = 0;
+
+    bool initAnchored(float width, float height, char const* bg = "GJ_square01.png", cocos2d::CCRect bgRect = {}) {
+        if (!this->initPopup(width, height, bg, bgRect)) return false;
+        return this->setup();
+    }
+};
 
 const int seedAddr = 0x6a4e20;
 
@@ -79,7 +115,7 @@ public:
     static PauseLayer* getPauseLayer();
 
     Mod* mod = Mod::get();
-    geode::Popup<>* layer = nullptr;
+    CompatPopup<>* layer = nullptr;
 
     Macro macro;
     Renderer renderer;

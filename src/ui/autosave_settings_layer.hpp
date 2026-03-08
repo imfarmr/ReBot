@@ -1,6 +1,6 @@
 #include "../includes.hpp"
 
-class AutoSaveLayer : public geode::Popup<>, public TextInputDelegate {
+class AutoSaveLayer : public CompatPopup<>, public TextInputDelegate {
 
 private:
 
@@ -128,7 +128,7 @@ private:
 		intervalLbl2->setOpacity(g.autosaveIntervalEnabled ? 255 : 100);
 		intervalInput->getBGSprite()->setOpacity(g.autosaveIntervalEnabled ? 90 : 30);
 		intervalInput->setEnabled(g.autosaveIntervalEnabled);
-		intervalInput->getInputNode()->m_placeholderLabel->setOpacity(g.autosaveIntervalEnabled ? 255 : 100);
+		intervalInput->getInputNode()->m_textLabel->setOpacity(g.autosaveIntervalEnabled ? 255 : 100);
 		if (!g.autosaveIntervalEnabled) {
 			intervalInput->getInputNode()->detachWithIME();
 			intervalInput->getInputNode()->onClickTrackNode(false);

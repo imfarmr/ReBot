@@ -38,12 +38,14 @@ add_library(${PROJECT_NAME} SHARED
     src/practice_fixes/play_layer.cpp
 )
 
-if (NOT DEFINED ENV{GEODE_SDK})
-    message(FATAL_ERROR "Unable to find Geode SDK! Please define GEODE_SDK environment variable to point to Geode")
+set(GEODE_SDK_PATH "/workspaces/geode")
+
+if (NOT EXISTS "${GEODE_SDK_PATH}")
+    message(FATAL_ERROR "Unable to find Geode SDK at ${GEODE_SDK_PATH}")
 else()
-    message(STATUS "Found Geode: $ENV{GEODE_SDK}")
+    message(STATUS "Using Geode SDK: ${GEODE_SDK_PATH}")
 endif()
 
-add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
+add_subdirectory(${GEODE_SDK_PATH} ${CMAKE_CURRENT_BINARY_DIR}/geode)
 
 setup_geode_mod(${PROJECT_NAME})

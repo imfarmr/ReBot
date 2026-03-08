@@ -1,3 +1,17 @@
+# v2.4.2
+
+* Fixed Geode v5 installation error by migrating `mod.json` dependencies to the new object format.
+* Updated dependency fields from deprecated `importance` to `required`.
+* Migrated event usage to Geode v5 (`Event<...>` + `.send()`), fixing renderer/ffmpeg event dispatch.
+* Migrated settings listeners to typed `listenForSettingChanges<T>(...)` calls.
+* Updated multiple hook signatures for current bindings (`processCommands`, keyboard dispatch callback args).
+* Replaced removed `CCARRAY_FOREACH` usage with `CCArrayExt` iteration.
+* Migrated async file picker usage from `.listen(...)` to `async::spawn(...)` callback flow.
+* Updated popup compatibility for Geode v5 (`Popup` non-template changes) across xdBot UI layers.
+* Updated text input label access for current bindings (`m_textLabel` replacement).
+* Fixed build issues from removed/renamed PlayerObject fields in practice fixes for current GD bindings.
+* gn pookies i kid u not i hate robtop james for breaking mods and geode after update
+
 # v2.4.1
 
 * Added Auto Clicker keybind.

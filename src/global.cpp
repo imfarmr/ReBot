@@ -3,7 +3,7 @@
 
 #include <Geode/modify/CCTextInputNode.hpp>
 
-#ifdef GEODE_IS_WINDOWS
+#if XDBOT_HAS_CUSTOM_KEYBINDS
 #include <geode.custom-keybinds/include/Keybinds.hpp>
 #endif
 
@@ -186,7 +186,7 @@ int Global::getCurrentFrame(bool editor) {
 }
 
 void Global::updateKeybinds() {
-#ifdef GEODE_IS_WINDOWS
+#if XDBOT_HAS_CUSTOM_KEYBINDS
 
   auto& g = Global::get();
   for (size_t i = 0; i < 6; i++) {
@@ -335,8 +335,7 @@ void Global::frameStepperOff() {
 
 PauseLayer* Global::getPauseLayer() {
   CCArray* children = CCDirector::sharedDirector()->getRunningScene()->getChildren();
-  CCObject* child;
-  CCARRAY_FOREACH(children, child) {
+  for (auto child : CCArrayExt<CCObject*>(children)) {
     if (PauseLayer* pauseLayer = typeinfo_cast<PauseLayer*>(child))
       return pauseLayer;
   }

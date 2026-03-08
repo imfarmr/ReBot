@@ -11,7 +11,7 @@
 #include <Geode/modify/CCKeyboardDispatcher.hpp>
 #include <Geode/modify/CCTouchDispatcher.hpp>
 
-#ifdef GEODE_IS_WINDOWS
+#if XDBOT_HAS_CUSTOM_KEYBINDS
 
 #include <geode.custom-keybinds/include/Keybinds.hpp>
 #include <regex>
@@ -25,7 +25,7 @@ const std::vector<std::string> keybindIDs = {
 };
 
 class $modify(CCKeyboardDispatcher) {
-  bool dispatchKeyboardMSG(enumKeyCodes key, bool isKeyDown, bool isKeyRepeat) {
+  bool dispatchKeyboardMSG(enumKeyCodes key, bool isKeyDown, bool isKeyRepeat, double dt) {
   
     auto& g = Global::get();
 
@@ -51,11 +51,11 @@ class $modify(CCKeyboardDispatcher) {
     //   log::debug("{}", str);
     // }
 
-    return CCKeyboardDispatcher::dispatchKeyboardMSG(key, isKeyDown, isKeyRepeat);
+    return CCKeyboardDispatcher::dispatchKeyboardMSG(key, isKeyDown, isKeyRepeat, dt);
   }
 };
 
-#ifdef GEODE_IS_ANDROID
+#if !XDBOT_HAS_CUSTOM_KEYBINDS
 
 namespace keybinds {
 
@@ -68,7 +68,7 @@ namespace keybinds {
 using namespace keybinds;
 
 void onKeybind(bool down, ActionID id) {
-#ifdef GEODE_IS_WINDOWS
+#if XDBOT_HAS_CUSTOM_KEYBINDS
 
   auto& g = Global::get();
 
@@ -142,7 +142,7 @@ void onKeybind(bool down, ActionID id) {
 
 $execute{
 
-  #ifdef GEODE_IS_WINDOWS
+  #if XDBOT_HAS_CUSTOM_KEYBINDS
 
     BindManager * bm = BindManager::get();
 

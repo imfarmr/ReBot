@@ -9,14 +9,13 @@
 	"name": "xdBot",
 	"developer": "Zilko",
 	"description": "Best Free Bot fr",
-	"dependencies": [
-		{
-			"id": "geode.custom-keybinds",
-			"version": ">=v2.1.0",
-			"importance": "required",
+	"dependencies": {
+		"geode.custom-keybinds": {
+			"version": ">=2.1.0",
+			"required": true,
 			"platforms": ["win"]
 		}
-	],
+	},
 	"settings": {
 		"button-setting": {
 			"type": "custom:button",

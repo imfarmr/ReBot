@@ -1,31 +1,9 @@
 #include "macro_editor.hpp"
 #include "record_layer.hpp"
 
-#include <Geode/modify/CCEGLView.hpp>
 #include <Geode/modify/FLAlertLayer.hpp>
 
 MacroEditLayer* editLayer = nullptr;
-
-#ifdef GEODE_IS_WINDOWS
-
-class $modify(CCEGLView) {
-    void onGLFWMouseMoveCallBack(GLFWwindow* v1, double v2, double v3) {
-        CCEGLView::onGLFWMouseMoveCallBack(v1, v2, v3);
-
-        if (!editLayer) return;
-
-        CCScene* scene = CCDirector::get()->getRunningScene();
-        if (MacroEditLayer* layer = scene->getChildByType<MacroEditLayer>(0))
-            editLayer = layer;
-        else
-            return;
-
-        editLayer->updateHover(getMousePos());
-        
-    }
-};
-
-#endif
 
 class $modify(FLAlertLayer) {
 
@@ -887,10 +865,9 @@ void MacroEditLayer::onSave(CCObject*) {
             onClose(nullptr);
 
             CCArray* children = CCDirector::sharedDirector()->getRunningScene()->getChildren();
-            CCObject* child;
-            CCARRAY_FOREACH(children, child) {
+            for (auto child : CCArrayExt<CCObject*>(children)) {
                 if (RecordLayer* layer = typeinfo_cast<RecordLayer*>(child)) {
-                    layer->keyBackClicked();
+                    layer->onClose(nullptr);
                     break;
                 }
             }
@@ -900,8 +877,7 @@ void MacroEditLayer::onSave(CCObject*) {
 
             Loader::get()->queueInMainThread([] {
                 CCArray* children = CCDirector::sharedDirector()->getRunningScene()->getChildren();
-                CCObject* child;
-                CCARRAY_FOREACH(children, child) {
+                for (auto child : CCArrayExt<CCObject*>(children)) {
                     if (MacroEditLayer* layer = typeinfo_cast<MacroEditLayer*>(child)) {
                         editLayer = layer;
                         break;
@@ -953,15 +929,14 @@ void MacroEditLayer::onClear(CCObject*) {
 }
 
 void MacroEditLayer::onMerge(CCObject*) {
-    geode::Popup<>* layer = nullptr;
+    CompatPopup<>* layer = nullptr;
     if (Global::get().layer)
-        layer = typeinfo_cast<geode::Popup<>*>(Global::get().layer);
+        layer = typeinfo_cast<CompatPopup<>*>(Global::get().layer);
     else {
         CCArray* children = CCDirector::sharedDirector()->getRunningScene()->getChildren();
-        CCObject* child;
-        CCARRAY_FOREACH(children, child) {
+        for (auto child : CCArrayExt<CCObject*>(children)) {
             if (typeinfo_cast<RecordLayer*>(child)) {
-                layer = typeinfo_cast<geode::Popup<>*>(child);
+                layer = typeinfo_cast<CompatPopup<>*>(child);
                 break;
             }
         }
