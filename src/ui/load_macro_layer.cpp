@@ -708,6 +708,7 @@ void MacroCell::handleLoad() {
 	g.macro.canChangeFPS = false;
 
     g.macro.isReBotMacro = isReBotFamilyName(g.macro.botInfo.name);
+    Utils::pushRecentMacro(path);
 
 	loadLayer->keyBackClicked();
 
@@ -778,6 +779,7 @@ void MacroCell::deleteMacro(bool reload) {
 		return FLAlertLayer::create("Error", "There was an error deleting this macro. ID: 7", "Ok")->show();
 	}
 	else {
+		Utils::removeRecentMacro(path);
 		if (reload) {
 			static_cast<LoadMacroLayer*>(loadLayer)->reloadList();
 			Notification::create("Macro Deleted", NotificationIcon::Success)->show();

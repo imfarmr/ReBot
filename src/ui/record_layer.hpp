@@ -108,6 +108,10 @@ public:
 
 	void openSaveMacro(CCObject*);
 
+	void openRecentMacro(CCObject*);
+
+	void refreshRecentMacros();
+
 	void showCodecPopup(CCObject*);
 
 	void toggleRecording(CCObject*);

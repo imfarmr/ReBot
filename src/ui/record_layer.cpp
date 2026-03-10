@@ -132,6 +132,127 @@ void RecordLayer::openLoadMacro(CCObject*) {
     LoadMacroLayer::open(static_cast<CompatPopup<>*>(this), nullptr);
 }
 
+void RecordLayer::openRecentMacro(CCObject* obj) {
+    auto recent = Utils::getRecentMacros();
+    auto id = static_cast<CCNode*>(obj)->getID();
+
+    size_t index = 0;
+    auto split = id.find_last_of('-');
+    if (split == std::string::npos)
+        return;
+
+    if (auto parsed = numFromString<size_t>(id.substr(split + 1)); !parsed)
+        return;
+    else
+        index = parsed.unwrap();
+
+    if (index >= recent.size())
+        return;
+
+    std::filesystem::path path = recent[index];
+    if (!std::filesystem::exists(path)) {
+        Utils::removeRecentMacro(path);
+        refreshRecentMacros();
+        return FLAlertLayer::create("Recent Macro", "This macro no longer exists.", "Ok")->show();
+    }
+
+    auto& g = Global::get();
+    Macro newMacro;
+
+    if (path.extension() == ".xd") {
+        if (!Macro::loadXDFile(path))
+            return FLAlertLayer::create("Error", "There was an error loading this macro. ID: 45", "Ok")->show();
+
+        newMacro = g.macro;
+    }
+    else {
+        std::ifstream f(path.string(), std::ios::binary);
+
+        f.seekg(0, std::ios::end);
+        size_t fileSize = f.tellg();
+        f.seekg(0, std::ios::beg);
+
+        std::vector<std::uint8_t> macroData(fileSize);
+        f.read(reinterpret_cast<char*>(macroData.data()), fileSize);
+        f.close();
+
+        newMacro = Macro::importData(macroData);
+    }
+
+    g.macro = newMacro;
+    g.currentAction = 0;
+    g.currentFrameFix = 0;
+    g.restart = true;
+    g.macro.canChangeFPS = false;
+    g.macro.isReBotMacro = isReBotFamilyName(g.macro.botInfo.name);
+    Utils::pushRecentMacro(path);
+
+    this->onClose(nullptr);
+    if (RecordLayer* newLayer = RecordLayer::openMenu(true))
+        newLayer->updateTPS();
+
+    if (!PlayLayer::get() && g.state != state::playing)
+        Macro::togglePlaying();
+    else if (g.state == state::recording) {
+        if (RecordLayer* layer = g.layer != nullptr ? static_cast<RecordLayer*>(g.layer) : nullptr) {
+            layer->recording->toggle(Global::get().state != state::recording);
+            layer->toggleRecording(nullptr);
+        }
+    }
+
+    if (path.extension() == ".xd")
+        FLAlertLayer::create("Warning", "<cl>.xd</c> extension macros may not function correctly in this version.", "Ok")->show();
+
+    Notification::create("Macro Loaded", NotificationIcon::Success)->show();
+}
+
+void RecordLayer::refreshRecentMacros() {
+    if (!menu)
+        return;
+
+    CCMenu* recentMenu = typeinfo_cast<CCMenu*>(menu->getChildByID("recent-macros-container"));
+    if (!recentMenu)
+        return;
+
+    recentMenu->removeAllChildrenWithCleanup(true);
+
+    auto recent = Utils::getRecentMacros();
+    if (recent.empty()) {
+        auto empty = CCLabelBMFont::create("No recent macros yet", "chatFont.fnt");
+        empty->setScale(0.42f);
+        empty->setOpacity(90);
+        empty->setPosition({ -117.f, -3.f });
+        recentMenu->addChild(empty);
+        return;
+    }
+
+    size_t shown = std::min<size_t>(2, recent.size());
+    for (size_t i = 0; i < shown; ++i) {
+        std::filesystem::path path = recent[i];
+        std::string name = path.stem().string();
+        if (path.extension() == ".json")
+            name = path.stem().stem().string();
+
+        auto bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+        bg->setContentSize({ 156.f, 30.f });
+        bg->setScale(0.36f);
+        bg->setColor({ 15, 18, 28 });
+        bg->setOpacity(150);
+
+        auto label = CCLabelBMFont::create(name.c_str(), "chatFont.fnt");
+        label->limitLabelWidth(118.f, 0.52f, 0.1f);
+        label->setScale(0.52f);
+        label->setOpacity(220);
+        label->setPosition({ 78.f, 15.f });
+        bg->addChild(label);
+
+        auto button = CCMenuItemSpriteExtra::create(bg, this, menu_selector(RecordLayer::openRecentMacro));
+        button->setPosition({ i == 0 ? -154.f : -80.f, 10.f });
+        button->setID(fmt::format("recent-macro-{}", i).c_str());
+        recentMenu->addChild(button);
+    }
+}
+
 RecordLayer* RecordLayer::openMenu(bool instant) {
     auto& g = Global::get();
     PlayLayer* pl = PlayLayer::get();
@@ -589,11 +710,10 @@ bool RecordLayer::setup() {
     CCSprite* spriteOff = CCSprite::createWithSpriteFrameName("GJ_checkOff_001.png");
 
     CCLabelBMFont* versionLabel = CCLabelBMFont::create(("ReBot " + reBotVersion).c_str(), "chatFont.fnt");
-    versionLabel->setOpacity(63);
-    versionLabel->setPosition(ccp(-217, -125));
+    versionLabel->setOpacity(120);
+    versionLabel->setPosition(ccp(-214, -122));
     versionLabel->setAnchorPoint({ 0, 0.5 });
-    versionLabel->setScale(0.4f);
-    versionLabel->setSkewX(4);
+    versionLabel->setScale(0.46f);
     menu->addChild(versionLabel);
 
 #ifdef GEODE_IS_WINDOWS
@@ -611,26 +731,26 @@ bool RecordLayer::setup() {
 
     CCScale9Sprite* bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.7f);
-    bg->setColor({ 0,0,0 });
-    bg->setOpacity(75);
-    bg->setPosition(ccp(-212, 121));
+    bg->setColor({ 12, 16, 24 });
+    bg->setOpacity(115);
+    bg->setPosition(ccp(-212, 125));
     bg->setAnchorPoint({ 0, 1 });
-    bg->setContentSize({ 275, 151 });
+    bg->setContentSize({ 275, 182 });
     menu->addChild(bg);
 
     bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.7f);
-    bg->setColor({ 0,0,0 });
-    bg->setOpacity(75);
-    bg->setPosition(ccp(-212, 0));
+    bg->setColor({ 12, 16, 24 });
+    bg->setOpacity(105);
+    bg->setPosition(ccp(-212, -10));
     bg->setAnchorPoint({ 0, 1 });
-    bg->setContentSize({ 275, 169 });
+    bg->setContentSize({ 275, 154 });
     menu->addChild(bg);
 
     bg = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
     bg->setScale(0.7f);
-    bg->setColor({ 0,0,0 });
-    bg->setOpacity(75);
+    bg->setColor({ 14, 18, 28 });
+    bg->setOpacity(110);
     bg->setPosition(ccp(103, 2));
     bg->setContentSize({ 313, 339 });
     menu->addChild(bg);
@@ -650,29 +770,48 @@ bool RecordLayer::setup() {
     menu->addChild(playing);
 
     actionsLabel = CCLabelBMFont::create(("Actions: " + std::to_string(g.macro.inputs.size())).c_str(), "chatFont.fnt");
-    actionsLabel->limitLabelWidth(57.f, 0.6f, 0.01f);
+    actionsLabel->limitLabelWidth(95.f, 0.6f, 0.01f);
     actionsLabel->updateLabel();
     actionsLabel->setAnchorPoint({ 0, 0.5 });
-    actionsLabel->setOpacity(83);
-    actionsLabel->setPosition(ccp(-201, 110));
+    actionsLabel->setOpacity(120);
+    actionsLabel->setPosition(ccp(-201, 113));
     menu->addChild(actionsLabel);
 
     CCLabelBMFont* lbl = CCLabelBMFont::create("Macro", "goldFont.fnt");
-    lbl->setPosition(ccp(-116.5, 112));
-    lbl->setScale(0.575f);
+    lbl->setPosition(ccp(-160.f, 114.f));
+    lbl->setScale(0.56f);
     menu->addChild(lbl);
+
+    auto subLabel = CCLabelBMFont::create("Record, load, edit", "chatFont.fnt");
+    subLabel->setScale(0.4f);
+    subLabel->setOpacity(95);
+    subLabel->setAnchorPoint({ 0.f, 0.5f });
+    subLabel->setPosition({ -201.f, 98.f });
+    menu->addChild(subLabel);
 
     lbl = CCLabelBMFont::create("Render", "goldFont.fnt");
-    lbl->setScale(0.6f);
-    lbl->setPosition(ccp(-116.5, -9));
+    lbl->setScale(0.56f);
+    lbl->setPosition(ccp(-162.f, -11.f));
     menu->addChild(lbl);
 
-
+    subLabel = CCLabelBMFont::create("Export presets", "chatFont.fnt");
+    subLabel->setScale(0.4f);
+    subLabel->setOpacity(95);
+    subLabel->setAnchorPoint({ 0.f, 0.5f });
+    subLabel->setPosition({ -201.f, -26.f });
+    menu->addChild(subLabel);
 
     lbl = CCLabelBMFont::create("Settings", "goldFont.fnt");
-    lbl->setPosition(ccp(103, 111));
-    lbl->setScale(0.7f);
+    lbl->setPosition(ccp(74.f, 112.f));
+    lbl->setScale(0.66f);
     menu->addChild(lbl);
+
+    subLabel = CCLabelBMFont::create("Gameplay utilities", "chatFont.fnt");
+    subLabel->setScale(0.4f);
+    subLabel->setOpacity(95);
+    subLabel->setAnchorPoint({ 0.f, 0.5f });
+    subLabel->setPosition({ 18.f, 95.f });
+    menu->addChild(subLabel);
 
     lbl = CCLabelBMFont::create("Record", "bigFont.fnt");
     lbl->setPosition(ccp(-161.5, 60));
@@ -714,7 +853,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::openSaveMacro));
 
-    btn->setPosition(ccp(-176, 34));
+    btn->setPosition(ccp(-176, 46));
     menu->addChild(btn);
 
 #ifdef GEODE_IS_WINDOWS
@@ -728,7 +867,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::openKeybinds));
 
-    btn->setPosition(ccp(40, -100));
+    btn->setPosition(ccp(40, -103));
     menu->addChild(btn);
 
 
@@ -739,7 +878,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::moreSettings));
 
-    btn->setPosition(ccp(148, -100));
+    btn->setPosition(ccp(148, -103));
     menu->addChild(btn);
 
     btnSprite = ButtonSprite::create("Load");
@@ -749,7 +888,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::openLoadMacro));
 
-    btn->setPosition(ccp(-115, 34));
+    btn->setPosition(ccp(-115, 46));
     menu->addChild(btn);
 
     btnSprite = ButtonSprite::create("Edit");
@@ -759,8 +898,37 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::onEditMacro));
 
-    btn->setPosition(ccp(-56, 34));
+    btn->setPosition(ccp(-56, 46));
     menu->addChild(btn);
+
+    auto recentCard = CCScale9Sprite::create("square02b_001.png", { 0, 0, 80, 80 });
+    recentCard->setScale(0.44f);
+    recentCard->setColor({ 9, 12, 20 });
+    recentCard->setOpacity(135);
+    recentCard->setPosition({ -128.f, 17.f });
+    recentCard->setAnchorPoint({ 0.5f, 0.5f });
+    recentCard->setContentSize({ 370.f, 74.f });
+    menu->addChild(recentCard);
+
+    auto recentTitle = CCLabelBMFont::create("Recent Macros", "bigFont.fnt");
+    recentTitle->setScale(0.33f);
+    recentTitle->setAnchorPoint({ 0.f, 0.5f });
+    recentTitle->setOpacity(215);
+    recentTitle->setPosition({ -201.f, 19.f });
+    menu->addChild(recentTitle);
+
+    auto recentHint = CCLabelBMFont::create("Quick load", "chatFont.fnt");
+    recentHint->setScale(0.38f);
+    recentHint->setAnchorPoint({ 0.f, 0.5f });
+    recentHint->setOpacity(92);
+    recentHint->setPosition({ -201.f, 5.f });
+    menu->addChild(recentHint);
+
+    auto recentMenu = CCMenu::create();
+    recentMenu->setPosition({ 0.f, 0.f });
+    recentMenu->setID("recent-macros-container");
+    menu->addChild(recentMenu);
+    refreshRecentMacros();
 
     widthInput = CCTextInputNode::create(150, 30, "Width", "chatFont.fnt");
     widthInput->m_textField->setAnchorPoint({ 0.5f, 0.5f });
@@ -819,7 +987,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RecordLayer::openPresets)
     );
-    btn->setPosition(ccp(-177.5, -97));
+    btn->setPosition(ccp(-177.5, -103));
 
     menu->addChild(btn);
 
@@ -831,7 +999,7 @@ bool RecordLayer::setup() {
         this,
         menu_selector(RenderSettingsLayer::open)
     );
-    btn->setPosition(ccp(-129.5, -97));
+    btn->setPosition(ccp(-129.5, -103));
     menu->addChild(btn);
 
 
@@ -923,7 +1091,7 @@ bool RecordLayer::setup() {
     renderToggle = CCMenuItemToggler::create(spriteOff2, spriteOn2, this, menu_selector(RecordLayer::toggleRender));
     renderToggle->toggle(g.renderer.recording || g.renderer.recordingAudio);
 
-    renderToggle->setPosition(ccp(-65.5, -100));
+    renderToggle->setPosition(ccp(-65.5, -103));
     menu->addChild(renderToggle);
 
     spr = CCSprite::createWithSpriteFrameName("GJ_infoIcon_001.png");

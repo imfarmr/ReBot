@@ -19,6 +19,12 @@ public:
 
     static std::vector<std::string> splitByChar(std::string str, char splitChar);
 
+    static std::string normalizeRecentMacroPath(const std::filesystem::path& path);
+    static std::vector<std::string> getRecentMacros();
+    static void saveRecentMacros(std::vector<std::string> const& macros);
+    static void pushRecentMacro(const std::filesystem::path& path);
+    static void removeRecentMacro(const std::filesystem::path& path);
+
     static int copyFile(const std::string& sourcePath, const std::string& destinationPath);
     
     static std::string narrow(const wchar_t* str);

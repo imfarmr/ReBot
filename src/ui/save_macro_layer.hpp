@@ -97,10 +97,13 @@ public:
         std::string author = authorInput->getString();
         std::string desc = descInput->getString();
 
-        int result = Macro::save(author, desc, path.string(), jsonToggle->isToggled());
+        bool saveAsJson = jsonToggle->isToggled();
+        int result = Macro::save(author, desc, path.string(), saveAsJson);
 
         if (result != 0)
             return FLAlertLayer::create("Error", "There was an error saving the macro. ID: " + std::to_string(result), "Ok")->show();
+
+        Utils::pushRecentMacro(path.string() + (saveAsJson ? ".gdr.json" : ".gdr"));
 
         this->keyBackClicked();
         Notification::create("Macro Saved", NotificationIcon::Success)->show();

@@ -160,6 +160,99 @@ std::vector<std::string> Utils::splitByChar(std::string str, char splitChar) {
     return strs;
 }
 
+std::string Utils::normalizeRecentMacroPath(const std::filesystem::path& path) {
+    std::error_code ec;
+    auto weak = std::filesystem::weakly_canonical(path, ec);
+    if (!ec)
+        return weak.string();
+
+    return path.lexically_normal().string();
+}
+
+std::vector<std::string> Utils::getRecentMacros() {
+    constexpr size_t kMaxRecentMacros = 5;
+
+    std::vector<std::string> recent;
+    auto serialized = Mod::get()->getSavedValue<std::string>("recent_macros");
+    if (serialized.empty())
+        return recent;
+
+    bool dirty = false;
+    for (auto& entry : splitByChar(serialized, '\n')) {
+        if (entry.empty()) {
+            dirty = true;
+            continue;
+        }
+
+        std::filesystem::path path(entry);
+        auto normalized = normalizeRecentMacroPath(path);
+        if (normalized.empty() || !std::filesystem::exists(path)) {
+            dirty = true;
+            continue;
+        }
+
+        if (std::find(recent.begin(), recent.end(), normalized) != recent.end()) {
+            dirty = true;
+            continue;
+        }
+
+        recent.push_back(normalized);
+        if (recent.size() >= kMaxRecentMacros)
+            break;
+    }
+
+    if (dirty)
+        saveRecentMacros(recent);
+
+    return recent;
+}
+
+void Utils::saveRecentMacros(std::vector<std::string> const& macros) {
+    std::string serialized;
+
+    for (size_t i = 0; i < macros.size(); ++i) {
+        if (macros[i].empty())
+            continue;
+
+        if (!serialized.empty())
+            serialized += '\n';
+
+        serialized += macros[i];
+    }
+
+    Mod::get()->setSavedValue("recent_macros", serialized);
+}
+
+void Utils::pushRecentMacro(const std::filesystem::path& path) {
+    constexpr size_t kMaxRecentMacros = 5;
+
+    auto normalized = normalizeRecentMacroPath(path);
+    if (normalized.empty())
+        return;
+
+    std::vector<std::string> recent;
+    recent.push_back(normalized);
+
+    for (auto& entry : getRecentMacros()) {
+        if (entry == normalized)
+            continue;
+
+        recent.push_back(entry);
+        if (recent.size() >= kMaxRecentMacros)
+            break;
+    }
+
+    saveRecentMacros(recent);
+}
+
+void Utils::removeRecentMacro(const std::filesystem::path& path) {
+    auto normalized = normalizeRecentMacroPath(path);
+    auto recent = getRecentMacros();
+
+    recent.erase(std::remove(recent.begin(), recent.end(), normalized), recent.end());
+    saveRecentMacros(recent);
+}
+
 std::string Utils::getTexture() {
     cocos2d::ccColor3B color = Mod::get()->getSettingValue<cocos2d::ccColor3B>("background_color");
     
